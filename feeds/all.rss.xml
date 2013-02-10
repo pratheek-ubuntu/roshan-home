@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>Hopeful thoughts</title><link>http://roshan-home.appspot.com/</link><description></description><atom:link href="http://roshan-home.appspot.com/feeds/all.rss.xml" rel="self"></atom:link><lastBuildDate>Fri, 01 Mar 2013 11:20:00 +0530</lastBuildDate><item><title>Changing to Windows (Stone age)</title><link>http://roshan-home.appspot.com/changing-to-windows-stone-age.html</link><description>&lt;div class="section" id="going-back-to-windows"&gt;
+&lt;h2&gt;Going back to Windows&lt;/h2&gt;
+&lt;p&gt;I was using my Macbook Pro for all of my development work lately.
+However for various reasons I decided to buy a desktop computer again
+and use that as main development system. Because you can only have Macs
+in either in &lt;a class="reference external" href="http://www.apple.com/macmini/"&gt;crippled&lt;/a&gt;, &lt;a class="reference external" href="http://www.apple.com/imac/"&gt;in a monitor&lt;/a&gt; or &lt;a class="reference external" href="http://www.apple.com/macpro/"&gt;incredible expensive&lt;/a&gt; a Mac was out of the question and I
+assembled a nice computer for about 600€.&lt;/p&gt;
+&lt;p&gt;Because I'm kinda annoyed by the bad state of the Linux desktop lately I
+decided to give Windows Vista a try. Now. I'm not going to defend my
+decision here (I already got enough discussions about why I'm using
+Windows again) but to share my experiences with configuring Windows to
+work more like I was used to work the last few years.&lt;/p&gt;
+&lt;div class="section" id="more-unix-love"&gt;
+&lt;h3&gt;More UNIX love&lt;/h3&gt;
+&lt;p&gt;A lot of the stuff I learned to love depends on some sort of UNIX
+environment. There is a UNIX subsystem in Windows, but that's not what
+you want to use. A better choice is &lt;a class="reference external" href="http://www.cygwin.com/"&gt;cygwin&lt;/a&gt;
+which installs a GNU user land with all the stuff you want on your
+system. I also added &lt;cite&gt;C:cygwinbin&lt;/cite&gt; to my &lt;em&gt;PATH&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;The latter has the advantage that you can use (non-symlinked)
+executables that come with cygwin from the normal Windows shell. This is
+great for a couple of reasons:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;You can use &lt;cite&gt;ssh&lt;/cite&gt; and use that as ssh executable in hg&lt;/li&gt;
+&lt;li&gt;If you're accidentally writing &lt;cite&gt;ls&lt;/cite&gt; it will still work like you
+think it would.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;This also makes the &lt;cite&gt;make&lt;/cite&gt; command and the compilers available. If
+you're using a Windows Python installation (like I do) make sure to add
+the Windows Python path &lt;em&gt;before&lt;/em&gt; the cygwin Python which is installed by
+default.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="configuring-version-control"&gt;
+&lt;h3&gt;Configuring Version Control&lt;/h3&gt;
+&lt;p&gt;I'm a vim user, so I installed vim.  However the version control systems
+I installed (hg and subversion) decided that it was a better idea to use
+the windows notepad.  That's easy to fix however.  Here my &lt;cite&gt;.hgrc&lt;/cite&gt; which
+sets the editor to vim and the ssh executable to the one from cygwin:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;[ui]&lt;/span&gt;
+&lt;span class="na"&gt;editor&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;vim&lt;/span&gt;
+&lt;span class="na"&gt;ssh&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;C:\cygwin\bin\ssh.exe&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;For subversion support I had to set the &lt;em&gt;SSH_EDITOR&lt;/em&gt; variable to &lt;cite&gt;vim&lt;/cite&gt;
+in the computer properities.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="configuring-ssh-agent"&gt;
+&lt;h3&gt;Configuring SSH-Agent&lt;/h3&gt;
+&lt;p&gt;The next thing I wanted to continue using was the &lt;cite&gt;ssh-agent&lt;/cite&gt;. That tool
+keeps your SSH passwords for your keys in memory so that you don't have
+to enter them over and over again. This is especially useful when using
+hg or svn with the ssh protocol.&lt;/p&gt;
+&lt;p&gt;Modern Linuxes automatically configure the ssh agent to start up with
+your X11 server and give you a nice UI prompt the first time the key is
+unlocked.  Unfortunately you can't have it &lt;em&gt;that&lt;/em&gt; nice in Windows, but
+it's not that far from it.  All you have to do is to create a
+&lt;cite&gt;start-ssh-agent.sh&lt;/cite&gt; script in &lt;cite&gt;C:cygwinhomeUSERNAME&lt;/cite&gt; that with this
+code in it:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c"&gt;#!/bin/sh&lt;/span&gt;
+&lt;span class="nb"&gt;export &lt;/span&gt;&lt;span class="nv"&gt;SSH_AUTH_SOCK&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;/tmp/.ssh-socket
+rm -f &lt;span class="nv"&gt;$SSH_AUTH_SOCK&lt;/span&gt;
+ssh-add -l 2&amp;gt;/dev/null
+&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;[&lt;/span&gt; &lt;span class="nv"&gt;$?&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; 2 &lt;span class="o"&gt;]&lt;/span&gt;; &lt;span class="k"&gt;then&lt;/span&gt;
+&lt;span class="k"&gt;  &lt;/span&gt;ssh-agent -a &lt;span class="nv"&gt;$SSH_AUTH_SOCK&lt;/span&gt; 2&amp;gt;/dev/null | sed &lt;span class="s1"&gt;&amp;#39;s/^echo/#echo/&amp;#39;&lt;/span&gt; &amp;gt;/tmp/.ssh-script
+  . /tmp/.ssh-script
+  &lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="nv"&gt;$SSH_AGENT_PID&lt;/span&gt; &amp;gt;/tmp/.ssh-agent-pid
+&lt;span class="k"&gt;fi&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Afterwards create a new Link in your autostart folder that points to
+&lt;cite&gt;C:cygwinbash.exe start-ssh-agent.exe&lt;/cite&gt; and let it execute in
+&lt;cite&gt;C:cygwinhomeUSERNAME&lt;/cite&gt;. Now you can start up your command line and
+enter &lt;cite&gt;ssh-add&lt;/cite&gt; the next time you login and it will prompt you for the
+passphrases of your keys.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="keyboard-layout"&gt;
+&lt;h3&gt;Keyboard Layout&lt;/h3&gt;
+&lt;p&gt;I use the German Windows keyboard layout ever since I use computers. It
+may not be the best one, but I got used to it and I want to continue
+using it. The only thing that was different on Linux was that the accent
+keys were not dead and produce a backtick without having to wait for a
+second key press. Also I had typographical quotes on my keyboard.
+Fortunately you can have the same on Windows by creating your own layout
+using the &lt;a class="reference external" href="http://www.microsoft.com/downloads/details.aspx?displaylang=en&amp;amp;FamilyID=8be579aa-780d-4253-9e0a-e17e51db2223"&gt;Microsoft Keyboard Layout Creator&lt;/a&gt;.
+Here the one I created: &lt;a class="reference external" href="http://paste.pocoo.org/show/108910/"&gt;Deutsch - Verbessert&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="the-good"&gt;
+&lt;h3&gt;The Good&lt;/h3&gt;
+&lt;p&gt;For a fair comparison I briefly installed the development version of
+Ubuntu on this machine as well. I was kinda surprised how fast the
+Windows desktop is. On OS X / GNOME you get used to a sluggish user
+interface and it's really an interesting experience going back to
+Windows because of that. The thing I was expecting to miss the most here
+are virtual desktops. Turns out that I don't really miss those, but I
+will probably buy a secondary screen to move X-Chat / Thunderbird /
+foobar onto it.&lt;/p&gt;
+&lt;p&gt;It's interesting how many things you're not missing until you rediscover
+them. &lt;a class="reference external" href="http://www.foobar2000.org/"&gt;foobar 2000&lt;/a&gt; was one of those,
+NetBeans the other. I was using NetBeans on ubuntu too, but the user
+experience was that the GUI was incredible slow. Eclipse was even worse.
+And the same thing happened on OS X as well. I don't know what the
+developers are doing that these two IDEs suck that much on non-Windows
+platforms, but the experience on a Windows system is great. I also just
+rediscovered the awesomeness of Visual Studio and really have to wonder
+how I managed to stick to MonoDevelop for that long.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="the-bad"&gt;
+&lt;h3&gt;The Bad&lt;/h3&gt;
+&lt;p&gt;Unfortunately there are some bad aspects too. The worst is probably that
+a lot of the Python libraries I was using so far have a bad Windows
+support, including mine. &lt;a class="reference external" href="http://pypi.python.org/pypi/Fabric"&gt;Fabric&lt;/a&gt;
+for example didn't even import on Windows when I was trying it. The
+other negative experience was that countless open-source zealots treat
+you like an outcast if you're working on Windows.&lt;/p&gt;
+&lt;p&gt;Anyhow. Works for me now and on the upside you can expect improved
+versions of the pocoo libraries regarding Windows-compatibility now :-)&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Armin</dc:creator><pubDate>Fri, 01 Mar 2013 11:20:00 +0530</pubDate><guid>tag:roshan-home.appspot.com,2013-03-01:changing-to-windows-stone-age.html</guid><category>windows</category><category>stoneage</category><category>bad</category></item><item><title>OSX as proxy for iOS and Android Dev</title><link>http://roshan-home.appspot.com/osx-as-proxy-for-ios-and-android-dev.html</link><description>&lt;div class="section" id="osx-as-transparent-wifi-mitm-proxy"&gt;
+&lt;h2&gt;OSX as Transparent Wifi MITM Proxy&lt;/h2&gt;
+&lt;p&gt;Yesterday I was in the situation where I wanted to debug an iOS device
+and what network calls it would make.  Normally the trivial step is to
+just define an HTTP proxy server in the wifi settings but that will only
+work for as long as you have something that actually honors this proxy
+server.  But there are better ways to transparently proxy connections from
+a device connected via Wifi which does not require any changes on the
+actual device.&lt;/p&gt;
+&lt;div class="section" id="the-tools"&gt;
+&lt;h3&gt;The Tools&lt;/h3&gt;
+&lt;p&gt;In order for this to work you need a device running OS X which is
+connected to the same network as the Wifi.  Then you need to convince the
+Wifi device to see you as the gateway instead of the actual gateway.  The
+easiest way is just to go to the settings and change the gateway to your
+computer's IP.  The second ingredient is an HTTP proxy, ideally one that
+can also decrypt and reencrypt SSL traffic.  Personally I can recommend
+&lt;a class="reference external" href="http://www.charlesproxy.com/"&gt;Charles&lt;/a&gt; for that.  Lastly you will need
+another proxy that can work transparently which sits between your device
+and Charles.  On OS X &lt;a class="reference external" href="http://darkk.net.ru/redsocks/"&gt;redsocks&lt;/a&gt; gets
+this job done.&lt;/p&gt;
+&lt;p&gt;If you don't want to spend the money on Charles or you want to rewrite
+traffic with Python you can use &lt;a class="reference external" href="http://mitmproxy.org/"&gt;mitmproxy&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="the-setup"&gt;
+&lt;h3&gt;The Setup&lt;/h3&gt;
+&lt;p&gt;The first thing you will notice is that when you point your Wifi device to
+your computer it will loose network connectivity.  That's because by
+default your computer won't forward packets.  This can easily be changed
+through sysctl:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+$ sudo sysctl -w net.inet.ip.forwarding=1
+&lt;/pre&gt;
+&lt;p&gt;After that you should be able to browse the internet again on your Wifi
+device.&lt;/p&gt;
+&lt;p&gt;The second step is installing &lt;tt class="docutils literal"&gt;redsocks&lt;/tt&gt;.  If you have &lt;a class="reference external" href="http://mxcl.github.com/homebrew/"&gt;brew&lt;/a&gt; that's a very trivial operation:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+$ brew install redsocks
+&lt;/pre&gt;
+&lt;p&gt;Once installed you will need to create a config file for it.  Call it
+&lt;tt class="docutils literal"&gt;redsocks.conf&lt;/tt&gt; and place it in a folder from which you run redsocks:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+base {
+    log_debug = on;
+    log_info = on;
+    log = stderr;
+    daemon = off;
+    redirector = generic;
+}
+
+redsocks {
+    local_ip = 0.0.0.0;
+    local_port = 12345;
+
+    ip = 127.0.0.1;
+    port = 8889;
+
+    // known types: socks4, socks5, http-connect, http-relay
+    type = socks5;
+}
+&lt;/pre&gt;
+&lt;p&gt;Since I'm using Charles I take advantage of it's socks5 support and point
+it to &lt;cite&gt;localhost:8889&lt;/cite&gt; where Charles normally starts up if configured as
+Socks5 proxy.  If you're using a regular HTTP proxy you can use
+&lt;tt class="docutils literal"&gt;&lt;span class="pre"&gt;http-connect&lt;/span&gt;&lt;/tt&gt; as proxy type.  The &lt;tt class="docutils literal"&gt;local_port&lt;/tt&gt; defines where the
+actual transparent redsocks proxy opens.&lt;/p&gt;
+&lt;p&gt;All you have to do then is to start it:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+$ redsocks
+&lt;/pre&gt;
+&lt;p&gt;After that you will need to point all the traffic that is not from your
+computer and from port &lt;tt class="docutils literal"&gt;80&lt;/tt&gt; and &lt;tt class="docutils literal"&gt;443&lt;/tt&gt; of your Wifi through redsocks.
+On OS X the firewall canbe controlled through &lt;tt class="docutils literal"&gt;ipfw&lt;/tt&gt;.  In my case the
+wifi device is &lt;tt class="docutils literal"&gt;en1&lt;/tt&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+$ sudo ipfw add fwd 127.0.0.1,12345 tcp from not me to any 80 in via en1
+$ sudo ipfw add fwd 127.0.0.1,12345 tcp from not me to any 443 in via en1
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div class="section" id="working-around-os-x-bugs"&gt;
+&lt;h3&gt;Working around OS X Bugs&lt;/h3&gt;
+&lt;p&gt;Now currently if you finish that above setup you will notice that nothing
+actually works.  The cause for this is a Bug in the OS X kernel that
+requires flipping the &lt;tt class="docutils literal"&gt;net.inet.ip.scopedroute&lt;/tt&gt; flag to &lt;tt class="docutils literal"&gt;0&lt;/tt&gt;.  I am not
+entirely sure what it does, but the internet reports that it breaks
+network sharing through the user preferences.  In any case it fixes
+&lt;tt class="docutils literal"&gt;ipfw&lt;/tt&gt; based forwarding so you can flip it with sysctl:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+$ sudo sysctl -w net.inet.ip.scopedroute=0
+&lt;/pre&gt;
+&lt;p&gt;Unfortunately in OS X Lion this flag can actually not be flipped from
+userspace so you need to set it as boot parameter and then restart your
+computer.  You can do this by editing the
+&lt;tt class="docutils literal"&gt;/Library/Preferences/SystemConfiguration/com.apple.Boot.plist&lt;/tt&gt; file:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cp"&gt;&amp;lt;?xml version=&amp;quot;1.0&amp;quot; encoding=&amp;quot;UTF-8&amp;quot;?&amp;gt;&lt;/span&gt;
+&lt;span class="cp"&gt;&amp;lt;!DOCTYPE plist PUBLIC &amp;quot;-//Apple//DTD PLIST 1.0//EN&amp;quot;&lt;/span&gt;
+&lt;span class="cp"&gt;  &amp;quot;http://www.apple.com/DTDs/PropertyList-1.0.dtd&amp;quot;&amp;gt;&lt;/span&gt;
+&lt;span class="nt"&gt;&amp;lt;plist&lt;/span&gt; &lt;span class="na"&gt;version=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;1.0&amp;quot;&lt;/span&gt;&lt;span class="nt"&gt;&amp;gt;&lt;/span&gt;
+&lt;span class="nt"&gt;&amp;lt;dict&amp;gt;&lt;/span&gt;
+  &lt;span class="nt"&gt;&amp;lt;key&amp;gt;&lt;/span&gt;Kernel Flags&lt;span class="nt"&gt;&amp;lt;/key&amp;gt;&lt;/span&gt;
+  &lt;span class="nt"&gt;&amp;lt;string&amp;gt;&lt;/span&gt;net.inet.ip.scopedroute=0&lt;span class="nt"&gt;&amp;lt;/string&amp;gt;&lt;/span&gt;
+&lt;span class="nt"&gt;&amp;lt;/dict&amp;gt;&lt;/span&gt;
+&lt;span class="nt"&gt;&amp;lt;/plist&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="installing-ssl-certificates"&gt;
+&lt;h3&gt;Installing SSL Certificates&lt;/h3&gt;
+&lt;p&gt;After all that your HTTP traffic should show up in your SSL interception
+proxy.  SSL will only work if the application on your Wifi device is
+trusting your SSL interception proxy's CA.  For browsers for instance
+that's trivial to change.  The Charles Certificate can be added to the
+trust store by following this link: &lt;a class="reference external" href="http://charlesproxy.com/charles.crt"&gt;charles.crt&lt;/a&gt;.  Note that this will not work
+with applications that don't use the system's CA trust store.  In that
+case you will need to recompile your application so that it trusts the
+Charles CA.&lt;/p&gt;
+&lt;img alt="../../../../static/charles.png" src="../../../../static/charles.png" style="width: 100%;" /&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Armin</dc:creator><pubDate>Sun, 10 Feb 2013 04:20:00 +0530</pubDate><guid>tag:roshan-home.appspot.com,2013-02-10:osx-as-proxy-for-ios-and-android-dev.html</guid><category>code</category><category>android</category><category>osx</category><category>ios</category><category></category></item><item><title>relational databases are not a bad choice</title><link>http://roshan-home.appspot.com/relational-databases-are-not-a-bad-choice.html</link><description>&lt;div class="section" id="sql-is-agile"&gt;
+&lt;h2&gt;SQL is Agile&lt;/h2&gt;
+&lt;p&gt;I have to admit, I was contemplating for a very long time if I should
+write an essay about databases because the whole topic feels so much like
+opening a can of worms.  First of all there is very little that was not
+been written somewhere else, secondly the topic is too complex that it
+would be possible to draw any conclusion out of personal experience.&lt;/p&gt;
+&lt;p&gt;The last two weeks however made me realize however that I would never
+start a project with MongoDB — or for that matter any other non relational
+database as primary data store — again.  Notice however that I said
+“start”.  I did not say I will never use MongoDB again, I said I will
+most likely not start a project with that again.&lt;/p&gt;
+&lt;p&gt;Now before I start with explaining myself I want to give a few disclaimers
+here to make sure everyone is on the same page.  First of all my main
+experience with non-relational datastores boils down to three rather
+different pieces of technology: MongoDB, hbase and redis.  It's very
+likely that what I attribute as an intrinsic redeeming quality of SQL
+might be something that another non-relational datastore can do as well.
+When I'm talking non-relational here I'm mostly talking about MongoDB
+however because that's what everybody else is talking about as well.  The
+newcomers to the pocoo IRC channel are overwhelmingly picking MongoDB as
+data store to get started.  In fact that is happening in so high numbers
+that the sentence “MongoDB is not the only data store” was added to the
+title.&lt;/p&gt;
+&lt;p&gt;The reason for this blog post is that I see a lot of people claiming that
+non-relational datastores are so much easier for prototyping than SQL
+based ones and I disagree somewhat with that.&lt;/p&gt;
+&lt;div class="section" id="schemas-are-awesome"&gt;
+&lt;h3&gt;Schemas are Awesome&lt;/h3&gt;
+&lt;p&gt;It seems like a lot of people are terribly afraid of the concept of a
+schema.  Schema == explicit typing == productivity killer.  The problem
+with this notion is that it's based on the idea that schemas could be
+removed entirely.  Unfortunately this idea is a pipe dream.  At one point
+you need to have an understanding of what you're dealing with: you need to
+know of what type a value is.  If we would not want to write out types
+in programming languages we have some options.  For instance we can solve
+that problem either by having some flow analysis on the code to see what
+type is contained in a variable at one point in time statically.  That's
+how Rust's type inference works for instance.  Alternatively we could do
+what Python and JavaScript do and switch to dynamic typing and solve the
+problem at runtime.&lt;/p&gt;
+&lt;p&gt;The problem is significantly worse in a data store because we're not
+talking about single types, we're talking about composite types in
+collections.  So say you are treating your non-relational database like a
+thing where you throw JSON documents at: even if you are not declaring a
+schema, you are assuming a schema if you are operating on collections on
+objects.  Assuming each of your posts has a comment count associated with
+it and you would want to find the total number of comments by tallying up
+the comment count on the post: you just used a schema.  You were expecting
+your comment count on each single post to be an integer or something else
+you can add together for this operation to make sense.&lt;/p&gt;
+&lt;p&gt;At the very least the schema lives in your head.  The problem with that is
+that this schema is not enforced so you will make mistakes.  Well maybe
+you won't, I certainly did make mistakes there.  If you store a string
+where you previously stored an integer in another document that will work
+for a while until you start to look at more than one document and suddenly
+your collection disagrees.&lt;/p&gt;
+&lt;p&gt;It turns out that even if you are not using schemas, your non-relational
+data store still uses some leftovers of a schema system for indexes.
+Despite all what people might tell you, non-relational data stores are
+still not magic, they operate under the same constraints as any other
+datastore and need explicit indexes to be fast.  When you add an index you
+are freezing a part of your schema which previously only existed in your
+head into your database.  Suddenly you have the same problems you had
+before again, just a little bit different.&lt;/p&gt;
+&lt;p&gt;Maybe I just always wanted schemas.  I definitely love schemas but I did
+not know that I love them so much until I suddenly did not have them.
+Everything became messy and the first thing I added to our codebase was a
+type system to express schemas.&lt;/p&gt;
+&lt;p&gt;One thing that's worth of note here is that the Parse web service is
+deriving schemas from the data you're inserting to ensure sanity.  If you
+created a document with a &lt;cite&gt;foo&lt;/cite&gt; key that is an integer all future inserts
+for that key also have to be of type integer.  That's another approach but
+it fails because JSON (what they are storing) has null types so for long
+you have no documents or &lt;cite&gt;null&lt;/cite&gt; values in your document Parse does not yet
+know your type.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="do-you-know-what-you-want"&gt;
+&lt;h3&gt;Do you know what you want?&lt;/h3&gt;
+&lt;p&gt;Now the lack of schemas should not be a reason to not use MongoDB or any
+other relational data store.  It's easy to add schemas on top and things
+like mongoengine for Python already do that for you.  While it does punch
+some holes into the concept of “you don't need schemas” it does not really
+question the use of a non-relational data store.  As far as I am concerned
+relational vs. non-relational is not about schemas vs. the lack of schemas
+but the embracing the idea of denormalized data.&lt;/p&gt;
+&lt;p&gt;Denormalized data is cool, no question about that.  It's fast and it's
+easy to understand and denormalizing in many non-relational data stores is
+so much easier than in SQL because you can nest things.  It will work for
+as long as you know what you are doing.  Unfortunately sometimes things
+happen and then you realize you now have data you can't get access to.
+This is what happened to me multiple times this week.&lt;/p&gt;
+&lt;p&gt;For reasons too complicated I could explain them here I had to extract
+some information from our database that I knew was there but not in the
+format I needed.  Everything was so amazingly well denormalized that it
+was a bloody mess getting some data out that with an SQL database would
+have been the case for a few joins and a group by.  It's because it was
+not written with that in mind the first place.  I suddenly needed the data
+in a different format.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="killed-by-too-complicated"&gt;
+&lt;h3&gt;Killed by “Too Complicated”&lt;/h3&gt;
+&lt;p&gt;What I took away from the last month is that there is a lot of value in
+being able to adjust to changes quickly.  We were in the lucky position of
+&lt;a class="reference external" href="http://warchest.com/radsoldiers"&gt;our game&lt;/a&gt; being featured on iTunes over
+Christmas in a few countries but that comes with downsides.  We suddenly
+had a lot more players than you would otherwise expect and suddenly we
+wanted answers to questions we did not even know we would ask two months
+ago and our data model did not make it particularly easy to provide the
+answers.&lt;/p&gt;
+&lt;p&gt;I like to believe we're quite capable and chose our technologies with
+great care, but there are always things you will be overlooking.&lt;/p&gt;
+&lt;p&gt;MongoDB and other non-relational datastores are amazing if you already
+know everything.  There are no surprises, now all you need to do is to
+scale up a successful product.  When you have a new product however there
+is a lot of value in being agile and being able to get useful information
+out of your data quickly, even if that was not what you had in mind
+originally.&lt;/p&gt;
+&lt;p&gt;SQL databases make that easy and up to a certain point they don't make you
+suffer for your lack of proper planning.  If queries get slow you can look
+at a slowlog and decide to add indexes to things you previously did not
+have indexes on.  In certain non-relational data stores that's not an
+option.  In redis you are maintaining your data structures yourself so if
+you suffer from your data being laid out the wrong way you have a problem.
+In MongoDB the presence or absence of an index changes the results of your
+queries sometimes which can make adding indexes a nontrivial task.&lt;/p&gt;
+&lt;p&gt;What's worse though is that sometimes you just can't add an index.  If you
+have nested objects you can't query on those because they are contained
+within other things.  Since the database does not provide any queries
+either it's not hard to be in the situation where you basically have to
+fetch all the data for offline processing through map reduce.&lt;/p&gt;
+&lt;p&gt;It's not a problem, it's part of the design of the database.  I did
+however despite all the planning we did not expect us to run into that as
+a problem.  Unfortunately sometimes the world does not play as it should
+and you are confronted with a new situation and then nothing is more
+demolishing than sitting on your data and not being able to get the
+information out quickly that you know is there.&lt;/p&gt;
+&lt;p&gt;Unfortunately a neat little idea I had was essentially killed by it being
+too complicated to do because it became too complex for the datastore
+without changing the layout.  So for at least myself my personal
+conclusion is that I will never be able to predict all the things upfront
+so while I have the chance I will opt for a more flexible data store and
+right now that means I will use a SQL database.&lt;/p&gt;
+&lt;p&gt;And I still like you MongoDB.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Armin</dc:creator><pubDate>Mon, 21 Jan 2013 13:40:00 +0530</pubDate><guid>tag:roshan-home.appspot.com,2013-01-21:relational-databases-are-not-a-bad-choice.html</guid><category>code</category><category>bitbucket</category></item></channel></rss>

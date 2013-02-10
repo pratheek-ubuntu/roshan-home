@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="">	
+<head>
+	<meta charset="utf-8"/>
+	<title>Changing to Windows (Stone age) - Hopeful thoughts</title>	
+	<meta name="author" content="Pratheek">
+	
+	<meta name="HandheldFriendly" content="True">
+	<meta name="MobileOptimized" content="320">
+	<meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0">
+	
+	<link href='http://fonts.googleapis.com/css?family=Droid+Sans:700,400|Droid+Sans+Mono' rel='stylesheet' type='text/css'>
+	<link rel="stylesheet" href="./theme/css/main.css" type="text/css" />
+		
+	<!--[if lt IE 9]>
+		<script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	
+			
+	<link href="./" type="application/atom+xml" rel="alternate" title="Hopeful thoughts ATOM Feed" />
+	</head>
+	
+<body>		
+	<header class="clearfix" role="banner">
+		<div class="wrapper">
+			<h1 class="huge"><a href=".">Hopeful thoughts</a></h1>
+		</div>
+	</header>
+	
+	<div role="main" class="content clearfix">	
+	<article>
+		<div class="post wrapper">
+			<h1>Changing to Windows (Stone age)</h1>
+			<div class="section" id="going-back-to-windows">
+<h2>Going back to Windows</h2>
+<p>I was using my Macbook Pro for all of my development work lately.
+However for various reasons I decided to buy a desktop computer again
+and use that as main development system. Because you can only have Macs
+in either in <a class="reference external" href="http://www.apple.com/macmini/">crippled</a>, <a class="reference external" href="http://www.apple.com/imac/">in a monitor</a> or <a class="reference external" href="http://www.apple.com/macpro/">incredible expensive</a> a Mac was out of the question and I
+assembled a nice computer for about 600€.</p>
+<p>Because I'm kinda annoyed by the bad state of the Linux desktop lately I
+decided to give Windows Vista a try. Now. I'm not going to defend my
+decision here (I already got enough discussions about why I'm using
+Windows again) but to share my experiences with configuring Windows to
+work more like I was used to work the last few years.</p>
+<div class="section" id="more-unix-love">
+<h3>More UNIX love</h3>
+<p>A lot of the stuff I learned to love depends on some sort of UNIX
+environment. There is a UNIX subsystem in Windows, but that's not what
+you want to use. A better choice is <a class="reference external" href="http://www.cygwin.com/">cygwin</a>
+which installs a GNU user land with all the stuff you want on your
+system. I also added <cite>C:cygwinbin</cite> to my <em>PATH</em>.</p>
+<p>The latter has the advantage that you can use (non-symlinked)
+executables that come with cygwin from the normal Windows shell. This is
+great for a couple of reasons:</p>
+<ul class="simple">
+<li>You can use <cite>ssh</cite> and use that as ssh executable in hg</li>
+<li>If you're accidentally writing <cite>ls</cite> it will still work like you
+think it would.</li>
+</ul>
+<p>This also makes the <cite>make</cite> command and the compilers available. If
+you're using a Windows Python installation (like I do) make sure to add
+the Windows Python path <em>before</em> the cygwin Python which is installed by
+default.</p>
+</div>
+<div class="section" id="configuring-version-control">
+<h3>Configuring Version Control</h3>
+<p>I'm a vim user, so I installed vim.  However the version control systems
+I installed (hg and subversion) decided that it was a better idea to use
+the windows notepad.  That's easy to fix however.  Here my <cite>.hgrc</cite> which
+sets the editor to vim and the ssh executable to the one from cygwin:</p>
+<div class="highlight"><pre><span class="k">[ui]</span>
+<span class="na">editor</span> <span class="o">=</span> <span class="s">vim</span>
+<span class="na">ssh</span> <span class="o">=</span> <span class="s">C:\cygwin\bin\ssh.exe</span>
+</pre></div>
+<p>For subversion support I had to set the <em>SSH_EDITOR</em> variable to <cite>vim</cite>
+in the computer properities.</p>
+</div>
+<div class="section" id="configuring-ssh-agent">
+<h3>Configuring SSH-Agent</h3>
+<p>The next thing I wanted to continue using was the <cite>ssh-agent</cite>. That tool
+keeps your SSH passwords for your keys in memory so that you don't have
+to enter them over and over again. This is especially useful when using
+hg or svn with the ssh protocol.</p>
+<p>Modern Linuxes automatically configure the ssh agent to start up with
+your X11 server and give you a nice UI prompt the first time the key is
+unlocked.  Unfortunately you can't have it <em>that</em> nice in Windows, but
+it's not that far from it.  All you have to do is to create a
+<cite>start-ssh-agent.sh</cite> script in <cite>C:cygwinhomeUSERNAME</cite> that with this
+code in it:</p>
+<div class="highlight"><pre><span class="c">#!/bin/sh</span>
+<span class="nb">export </span><span class="nv">SSH_AUTH_SOCK</span><span class="o">=</span>/tmp/.ssh-socket
+rm -f <span class="nv">$SSH_AUTH_SOCK</span>
+ssh-add -l 2&gt;/dev/null
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="o">=</span> 2 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">  </span>ssh-agent -a <span class="nv">$SSH_AUTH_SOCK</span> 2&gt;/dev/null | sed <span class="s1">&#39;s/^echo/#echo/&#39;</span> &gt;/tmp/.ssh-script
+  . /tmp/.ssh-script
+  <span class="nb">echo</span> <span class="nv">$SSH_AGENT_PID</span> &gt;/tmp/.ssh-agent-pid
+<span class="k">fi</span>
+</pre></div>
+<p>Afterwards create a new Link in your autostart folder that points to
+<cite>C:cygwinbash.exe start-ssh-agent.exe</cite> and let it execute in
+<cite>C:cygwinhomeUSERNAME</cite>. Now you can start up your command line and
+enter <cite>ssh-add</cite> the next time you login and it will prompt you for the
+passphrases of your keys.</p>
+</div>
+<div class="section" id="keyboard-layout">
+<h3>Keyboard Layout</h3>
+<p>I use the German Windows keyboard layout ever since I use computers. It
+may not be the best one, but I got used to it and I want to continue
+using it. The only thing that was different on Linux was that the accent
+keys were not dead and produce a backtick without having to wait for a
+second key press. Also I had typographical quotes on my keyboard.
+Fortunately you can have the same on Windows by creating your own layout
+using the <a class="reference external" href="http://www.microsoft.com/downloads/details.aspx?displaylang=en&amp;FamilyID=8be579aa-780d-4253-9e0a-e17e51db2223">Microsoft Keyboard Layout Creator</a>.
+Here the one I created: <a class="reference external" href="http://paste.pocoo.org/show/108910/">Deutsch - Verbessert</a>.</p>
+</div>
+<div class="section" id="the-good">
+<h3>The Good</h3>
+<p>For a fair comparison I briefly installed the development version of
+Ubuntu on this machine as well. I was kinda surprised how fast the
+Windows desktop is. On OS X / GNOME you get used to a sluggish user
+interface and it's really an interesting experience going back to
+Windows because of that. The thing I was expecting to miss the most here
+are virtual desktops. Turns out that I don't really miss those, but I
+will probably buy a secondary screen to move X-Chat / Thunderbird /
+foobar onto it.</p>
+<p>It's interesting how many things you're not missing until you rediscover
+them. <a class="reference external" href="http://www.foobar2000.org/">foobar 2000</a> was one of those,
+NetBeans the other. I was using NetBeans on ubuntu too, but the user
+experience was that the GUI was incredible slow. Eclipse was even worse.
+And the same thing happened on OS X as well. I don't know what the
+developers are doing that these two IDEs suck that much on non-Windows
+platforms, but the experience on a Windows system is great. I also just
+rediscovered the awesomeness of Visual Studio and really have to wonder
+how I managed to stick to MonoDevelop for that long.</p>
+</div>
+<div class="section" id="the-bad">
+<h3>The Bad</h3>
+<p>Unfortunately there are some bad aspects too. The worst is probably that
+a lot of the Python libraries I was using so far have a bad Windows
+support, including mine. <a class="reference external" href="http://pypi.python.org/pypi/Fabric">Fabric</a>
+for example didn't even import on Windows when I was trying it. The
+other negative experience was that countless open-source zealots treat
+you like an outcast if you're working on Windows.</p>
+<p>Anyhow. Works for me now and on the upside you can expect improved
+versions of the pocoo libraries regarding Windows-compatibility now :-)</p>
+</div>
+</div>
+
+			
+			<a href="https://twitter.com/share" class="twitter-share-button" data-via="" data-lang="en" data-size="large" data-related="">Tweet</a>
+			<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+						
+						
+		</div>
+	
+	<div class="meta wrapper">
+	<time datetime="2013-03-01T11:20:00" pubdate>Fri 01 March 2013</time>
+	<ul class="tag clearfix">
+		<li><a href="./category/rant.html">rant</a></li>
+			<li><a href="./tag/windows.html">windows</a></li>
+			<li><a href="./tag/stoneage.html">stoneage</a></li>
+			<li><a href="./tag/bad.html">bad</a></li>
+		</ul>
+	</div>	</article>	
+</div>
+	
+		
+<footer class="clearfix">
+	<div class="wrapper pages">
+		<ul class="nav">
+					<li><a href="./archives.html">Archive</a></li>
+		</ul>
+	</div>
+	
+	<div class="copy wrapper">
+		<ul class="social">
+						<li><a href="http://github.com/pratheek-ubuntu">github</a></li>
+					</ul>
+	
+		<p role="contentinfo">© 2012 Pratheek<br>
+		Proudly powered by <a href="http://alexis.notmyidea.org/pelican/">Pelican</a>.</p>
+	</div>
+</footer>
+	
+	<script>
+	  var _gaq=[['_setAccount',''],['_trackPageview']];
+	  (function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+	  g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
+	  s.parentNode.insertBefore(g,s)}(document,'script'));
+	</script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="">	
+<head>
+	<meta charset="utf-8"/>
+	<title>OSX as proxy for iOS and Android Dev - Hopeful thoughts</title>	
+	<meta name="author" content="Pratheek">
+	
+	<meta name="HandheldFriendly" content="True">
+	<meta name="MobileOptimized" content="320">
+	<meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0">
+	
+	<link href='http://fonts.googleapis.com/css?family=Droid+Sans:700,400|Droid+Sans+Mono' rel='stylesheet' type='text/css'>
+	<link rel="stylesheet" href="./theme/css/main.css" type="text/css" />
+		
+	<!--[if lt IE 9]>
+		<script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	
+			
+	<link href="./" type="application/atom+xml" rel="alternate" title="Hopeful thoughts ATOM Feed" />
+	</head>
+	
+<body>		
+	<header class="clearfix" role="banner">
+		<div class="wrapper">
+			<h1 class="huge"><a href=".">Hopeful thoughts</a></h1>
+		</div>
+	</header>
+	
+	<div role="main" class="content clearfix">	
+	<article>
+		<div class="post wrapper">
+			<h1>OSX as proxy for iOS and Android Dev</h1>
+			<div class="section" id="osx-as-transparent-wifi-mitm-proxy">
+<h2>OSX as Transparent Wifi MITM Proxy</h2>
+<p>Yesterday I was in the situation where I wanted to debug an iOS device
+and what network calls it would make.  Normally the trivial step is to
+just define an HTTP proxy server in the wifi settings but that will only
+work for as long as you have something that actually honors this proxy
+server.  But there are better ways to transparently proxy connections from
+a device connected via Wifi which does not require any changes on the
+actual device.</p>
+<div class="section" id="the-tools">
+<h3>The Tools</h3>
+<p>In order for this to work you need a device running OS X which is
+connected to the same network as the Wifi.  Then you need to convince the
+Wifi device to see you as the gateway instead of the actual gateway.  The
+easiest way is just to go to the settings and change the gateway to your
+computer's IP.  The second ingredient is an HTTP proxy, ideally one that
+can also decrypt and reencrypt SSL traffic.  Personally I can recommend
+<a class="reference external" href="http://www.charlesproxy.com/">Charles</a> for that.  Lastly you will need
+another proxy that can work transparently which sits between your device
+and Charles.  On OS X <a class="reference external" href="http://darkk.net.ru/redsocks/">redsocks</a> gets
+this job done.</p>
+<p>If you don't want to spend the money on Charles or you want to rewrite
+traffic with Python you can use <a class="reference external" href="http://mitmproxy.org/">mitmproxy</a>.</p>
+</div>
+<div class="section" id="the-setup">
+<h3>The Setup</h3>
+<p>The first thing you will notice is that when you point your Wifi device to
+your computer it will loose network connectivity.  That's because by
+default your computer won't forward packets.  This can easily be changed
+through sysctl:</p>
+<pre class="literal-block">
+$ sudo sysctl -w net.inet.ip.forwarding=1
+</pre>
+<p>After that you should be able to browse the internet again on your Wifi
+device.</p>
+<p>The second step is installing <tt class="docutils literal">redsocks</tt>.  If you have <a class="reference external" href="http://mxcl.github.com/homebrew/">brew</a> that's a very trivial operation:</p>
+<pre class="literal-block">
+$ brew install redsocks
+</pre>
+<p>Once installed you will need to create a config file for it.  Call it
+<tt class="docutils literal">redsocks.conf</tt> and place it in a folder from which you run redsocks:</p>
+<pre class="literal-block">
+base {
+    log_debug = on;
+    log_info = on;
+    log = stderr;
+    daemon = off;
+    redirector = generic;
+}
+
+redsocks {
+    local_ip = 0.0.0.0;
+    local_port = 12345;
+
+    ip = 127.0.0.1;
+    port = 8889;
+
+    // known types: socks4, socks5, http-connect, http-relay
+    type = socks5;
+}
+</pre>
+<p>Since I'm using Charles I take advantage of it's socks5 support and point
+it to <cite>localhost:8889</cite> where Charles normally starts up if configured as
+Socks5 proxy.  If you're using a regular HTTP proxy you can use
+<tt class="docutils literal"><span class="pre">http-connect</span></tt> as proxy type.  The <tt class="docutils literal">local_port</tt> defines where the
+actual transparent redsocks proxy opens.</p>
+<p>All you have to do then is to start it:</p>
+<pre class="literal-block">
+$ redsocks
+</pre>
+<p>After that you will need to point all the traffic that is not from your
+computer and from port <tt class="docutils literal">80</tt> and <tt class="docutils literal">443</tt> of your Wifi through redsocks.
+On OS X the firewall canbe controlled through <tt class="docutils literal">ipfw</tt>.  In my case the
+wifi device is <tt class="docutils literal">en1</tt>:</p>
+<pre class="literal-block">
+$ sudo ipfw add fwd 127.0.0.1,12345 tcp from not me to any 80 in via en1
+$ sudo ipfw add fwd 127.0.0.1,12345 tcp from not me to any 443 in via en1
+</pre>
+</div>
+<div class="section" id="working-around-os-x-bugs">
+<h3>Working around OS X Bugs</h3>
+<p>Now currently if you finish that above setup you will notice that nothing
+actually works.  The cause for this is a Bug in the OS X kernel that
+requires flipping the <tt class="docutils literal">net.inet.ip.scopedroute</tt> flag to <tt class="docutils literal">0</tt>.  I am not
+entirely sure what it does, but the internet reports that it breaks
+network sharing through the user preferences.  In any case it fixes
+<tt class="docutils literal">ipfw</tt> based forwarding so you can flip it with sysctl:</p>
+<pre class="literal-block">
+$ sudo sysctl -w net.inet.ip.scopedroute=0
+</pre>
+<p>Unfortunately in OS X Lion this flag can actually not be flipped from
+userspace so you need to set it as boot parameter and then restart your
+computer.  You can do this by editing the
+<tt class="docutils literal">/Library/Preferences/SystemConfiguration/com.apple.Boot.plist</tt> file:</p>
+<div class="highlight"><pre><span class="cp">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span>
+<span class="cp">&lt;!DOCTYPE plist PUBLIC &quot;-//Apple//DTD PLIST 1.0//EN&quot;</span>
+<span class="cp">  &quot;http://www.apple.com/DTDs/PropertyList-1.0.dtd&quot;&gt;</span>
+<span class="nt">&lt;plist</span> <span class="na">version=</span><span class="s">&quot;1.0&quot;</span><span class="nt">&gt;</span>
+<span class="nt">&lt;dict&gt;</span>
+  <span class="nt">&lt;key&gt;</span>Kernel Flags<span class="nt">&lt;/key&gt;</span>
+  <span class="nt">&lt;string&gt;</span>net.inet.ip.scopedroute=0<span class="nt">&lt;/string&gt;</span>
+<span class="nt">&lt;/dict&gt;</span>
+<span class="nt">&lt;/plist&gt;</span>
+</pre></div>
+</div>
+<div class="section" id="installing-ssl-certificates">
+<h3>Installing SSL Certificates</h3>
+<p>After all that your HTTP traffic should show up in your SSL interception
+proxy.  SSL will only work if the application on your Wifi device is
+trusting your SSL interception proxy's CA.  For browsers for instance
+that's trivial to change.  The Charles Certificate can be added to the
+trust store by following this link: <a class="reference external" href="http://charlesproxy.com/charles.crt">charles.crt</a>.  Note that this will not work
+with applications that don't use the system's CA trust store.  In that
+case you will need to recompile your application so that it trusts the
+Charles CA.</p>
+<img alt="../../../../static/charles.png" src="../../../../static/charles.png" style="width: 100%;" />
+</div>
+</div>
+
+			
+			<a href="https://twitter.com/share" class="twitter-share-button" data-via="" data-lang="en" data-size="large" data-related="">Tweet</a>
+			<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+						
+						
+		</div>
+	
+	<div class="meta wrapper">
+	<time datetime="2013-02-10T04:20:00" pubdate>Sun 10 February 2013</time>
+	<ul class="tag clearfix">
+		<li><a href="./category/yeah.html">yeah</a></li>
+			<li><a href="./tag/code.html">code</a></li>
+			<li><a href="./tag/android.html">android</a></li>
+			<li><a href="./tag/osx.html">osx</a></li>
+			<li><a href="./tag/ios.html">ios</a></li>
+			<li><a href="./tag/.html"></a></li>
+		</ul>
+	</div>	</article>	
+</div>
+	
+		
+<footer class="clearfix">
+	<div class="wrapper pages">
+		<ul class="nav">
+					<li><a href="./archives.html">Archive</a></li>
+		</ul>
+	</div>
+	
+	<div class="copy wrapper">
+		<ul class="social">
+						<li><a href="http://github.com/pratheek-ubuntu">github</a></li>
+					</ul>
+	
+		<p role="contentinfo">© 2012 Pratheek<br>
+		Proudly powered by <a href="http://alexis.notmyidea.org/pelican/">Pelican</a>.</p>
+	</div>
+</footer>
+	
+	<script>
+	  var _gaq=[['_setAccount',''],['_trackPageview']];
+	  (function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+	  g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
+	  s.parentNode.insertBefore(g,s)}(document,'script'));
+	</script>
+</body>
+</html>
